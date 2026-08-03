@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <stdexcept>
+#pragma once
 
 namespace fs = std::filesystem;
 class MemoryMap{
@@ -51,7 +52,12 @@ public:
 
 		std::span<const char> Data(){
 
-				return {data,size};
+				return std::span<const char>{data,size};
+		}
+
+		std::size_t get_size(){
+
+				return size;
 		}
 
 };

@@ -1,6 +1,9 @@
+#include <optional>
 #include <queue>
+#include <algorithm>
 #include "MemoryMap.hpp"
 #include <filesystem>
+#include <string_view>
 #include <thread>
 
 /*Give all the files where the word is located in */
@@ -13,26 +16,32 @@ class grepper{
 private:
 
 std::queue<std::mutex> jobs;
-
-
+const fs::path file;
 
 
 public:
 
-grepper(const fs::path& file){
-}
+grepper(const fs::path& file):file(file){}
 
 
-void Open(const fs::path path){
+auto SearchWord(const std::string_view word){
 
-		MemoryMap file{path};
+		MemoryMap path(file);
 
-		auto current = file.Data().data();
-		auto end = current + file.Data().size();
 
-		std::string f(current,static_cast<std::size_t>(end - current));
+		std::string_view s(path.Data().data(),path.get_size());
 
-		std::cout << f << std::endl;
+		auto match = s.find(word);
+
+		if (match == std::string_view::npos){
+
+				std::cout << "Not found" << std::endl;
+				return;
+		}
+		std::cout << "Found " << std::endl;
+		return;
+
+
 }
 
 };
