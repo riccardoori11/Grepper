@@ -5,7 +5,7 @@ int main(){
 		
 		grepper file("hi.txt");
 
-		file.SearchWord("sdaldksljakdlsjakldjsaklj");
+		file.SearchWord();
 
 		return 0;
 }
