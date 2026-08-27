@@ -104,6 +104,12 @@ void producer(){
 
 }
 
+
+constexpr bool is_letter(char c){
+
+		return (c >= 'a'&& c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
+}
+
 using Path_Maybe = std::optional<std::size_t>;
 Path_Maybe parse(std::span<const char> bytes, std::string_view txt){
 
@@ -112,22 +118,29 @@ Path_Maybe parse(std::span<const char> bytes, std::string_view txt){
 
 		std::string_view text(begin, end);
 
-		std::size_t position = text.find(txt);
+		auto txt_length = txt.size();
+
+		std::cout << text.data() << std::endl;
+		auto position = text.find(txt);
 
 		if (position != std::string::npos){
+				auto start_word = bytes.data() + position;
+				auto prev = start_word - 1;
+				auto next = start_word + txt_length;
+				if (is_letter(*prev) || is_letter(*next)){
 
-				auto prev = position - 1;
-				auto next = position + 1;
-
-				if (prev == ' ' && next == ' '){
-						std::cout << "Found" << std::endl;
-						return position;
+						std::cout << "Contained in another word" << std::endl;
+						return std::nullopt;
 				}
+				std::cout << "Found" << std::endl;
+				return position;
+
 		}
+		std::cout << "Not found" << std::endl;
 		return std::nullopt;
 
 }
-
+/*
 void consumer(){
 
 		fs::path path;
@@ -137,26 +150,27 @@ void consumer(){
 		while (auto path = a.wait_and_pop()){
 
 				MemoryMap file(*path);
-				/* parse whatever 
-				 * when each thread finishes their own local work merge, also make sure that 2 threads dont work on the same file*/
+				
 				parse(file.Data(), txt);
 		}
 
 }
+*/
 
 void Test(fs::path& path,std::string_view txt){
 
 		MemoryMap a{path};
+		parse(a.Data(),txt);
 }
 
 
 int main(){
 
-		std::cout << "" << std::endl;
-
 		std::string_view txt = "Hello";
 
-		Test("m.txt", txt);
+		fs::path path = "m.txt";
+
+		Test(path, txt);
 
 
 		return 0;
