@@ -107,7 +107,13 @@ void producer(){
 
 constexpr bool is_letter(char c){
 
-		return (c >= 'a'&& c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
+		return (c >= 'a'&& c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
+
+
+constexpr bool is_beginning_line(std::size_t pos){
+
+		return pos == 0;
 }
 
 using Path_Maybe = std::optional<std::size_t>;
@@ -118,29 +124,37 @@ Path_Maybe parse(std::span<const char> bytes, std::string_view txt){
 
 		std::string_view text(begin, end);
 
+		std::size_t search_from{};
+
 		auto txt_length = txt.size();
+		while (true){
+				auto position = text.find(txt,search_from);
+				if (position == std::string_view::npos){
 
-		std::cout << text.data() << std::endl;
-		auto position = text.find(txt);
-
-		if (position != std::string::npos){
-				auto start_word = bytes.data() + position;
-				auto prev = start_word - 1;
-				auto next = start_word + txt_length;
-				if (is_letter(*prev) || is_letter(*next)){
-
-						std::cout << "Contained in another word" << std::endl;
 						return std::nullopt;
 				}
-				std::cout << "Found" << std::endl;
-				return position;
 
+						auto start_word = bytes.data() + position;
+						const char* prev;
+						if (is_beginning_line(position)){
+								prev = start_word;
+						}else{
+								prev = start_word - 1;
+						}
+						auto next = start_word + txt_length;
+						if (!is_letter(*prev) && !is_letter(*next)){
+								
+								std::cout << "Found" << std::endl;
+								return position;
+						}
+						
+				search_from = position + 1;
 		}
-		std::cout << "Not found" << std::endl;
 		return std::nullopt;
 
 }
-/*
+
+
 void consumer(){
 
 		fs::path path;
@@ -155,22 +169,20 @@ void consumer(){
 		}
 
 }
-*/
 
-void Test(fs::path& path,std::string_view txt){
+/*void Test(fs::path& path,std::string_view txt){
 
 		MemoryMap a{path};
 		parse(a.Data(),txt);
 }
 
+*/
 
 int main(){
 
 		std::string_view txt = "Hello";
 
 		fs::path path = "m.txt";
-
-		Test(path, txt);
 
 
 		return 0;
