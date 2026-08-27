@@ -70,7 +70,7 @@ public:
 						return {};
 				}
 
-				std::shared_ptr<T> const res (std::make_shared(std::move(queue_.front())));
+				std::shared_ptr<T> const res (std::make_shared<T>(std::move(queue_.front())));
 				queue_.pop();
 				return res;
 		}

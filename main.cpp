@@ -1,7 +1,9 @@
+#include <exception>
 #include <iostream>
 #include <algorithm>
 #include <fcntl.h>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <span>
 #include <stdexcept>
@@ -90,17 +92,36 @@ void takeWorker(){
 
 }
 
+bool is_dotFile(auto& entry){
+		return entry.path().filename().string().starts_with('.');
+}
 
 void producer(){
 
-		for (auto& entry: fs::recursive_directory_iterator(root)){
+		fs::recursive_directory_iterator it(root);
+		fs::recursive_directory_iterator end;
+
+		try{
+		for (; it != end; ++it){
+
+				auto entry = *it;
+				if (is_dotFile(entry)){
+						if (entry.is_directory()){}
+								it.disable_recursion_pending();
+								continue;
+				}
 
 				if (entry.is_regular_file() && entry.path().extension() == ".txt"){
 
 						a.push(entry.path());
-						std::cout << "Pushed entry" << entry.path() << std::endl;
 				}
 		}
+		}
+		catch(const std::exception& error){
+
+				std::cerr << error.what() << std::endl;
+		}
+		a.close();
 
 }
 
@@ -136,15 +157,23 @@ Path_Maybe parse(std::span<const char> bytes, std::string_view txt){
 
 						auto start_word = bytes.data() + position;
 						const char* prev;
+						bool beginning_line = false;
 						if (is_beginning_line(position)){
 								prev = start_word;
+								beginning_line = true;
 						}else{
 								prev = start_word - 1;
 						}
 						auto next = start_word + txt_length;
+						if (beginning_line){
+
+								if (!is_letter(*next)){
+
+										std::cout << "Found" << std::endl;
+										return position;
+								}
+						}
 						if (!is_letter(*prev) && !is_letter(*next)){
-								
-								std::cout << "Found" << std::endl;
 								return position;
 						}
 						
@@ -158,32 +187,52 @@ Path_Maybe parse(std::span<const char> bytes, std::string_view txt){
 void consumer(){
 
 		fs::path path;
+		std::vector<fs::path> files;
 
-		std::string_view txt = "Hello";
+		std::string_view txt = "hello";
 
-		while (auto path = a.wait_and_pop()){
+		while ( auto path = a.wait_and_pop()){
 
+				try {
 				MemoryMap file(*path);
 				
-				parse(file.Data(), txt);
+				auto parsed = parse(file.Data(), txt);
+
+				if (parsed){
+						std::cout << *path << std::endl;
+				}
+				}
+				catch(...){
+
+						continue;
+				}
+				
 		}
+
 
 }
 
-/*void Test(fs::path& path,std::string_view txt){
+void Test(fs::path& path,std::string_view txt){
 
 		MemoryMap a{path};
 		parse(a.Data(),txt);
 }
 
-*/
 
 int main(){
+		std::thread t1(producer);
+		std::thread t2(consumer);
 
-		std::string_view txt = "Hello";
 
+		t1.join();
+		t2.join();
+
+/*
+		std::string_view txt = "dslkjdslkajdlkjo3p1ie0921i12903091";
 		fs::path path = "m.txt";
+		Test(path,"dslkjdslkajdlkjo3p1ie0921i12903091");
 
+		*/
 
 		return 0;
 }
