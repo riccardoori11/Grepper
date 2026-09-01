@@ -1,4 +1,5 @@
 #include <exception>
+#include <assert.h>
 #include <functional>
 #include <iostream>
 #include <algorithm>
@@ -254,18 +255,66 @@ auto multithreaded_version(){
 
 }
 
+std::vector<fs::path> files_single{};
+
+auto singleThreadedVersion(){
+
+		std::string_view txt = "hello";
+
+		try{
+
+				fs::recursive_directory_iterator it{root};
+				fs::recursive_directory_iterator end;
+
+
+				for (; it != end; ++it){
+						auto entry = *it;
+						if (is_dotFile(entry)){
+
+								if (entry.is_directory()){
+
+										it.disable_recursion_pending();
+										continue;
+								}
+						}
+
+						if (entry.is_regular_file() && entry.path().extension() == ".txt"){
+								try{
+								MemoryMap file(entry.path());
+								auto parsed = parse(file.Data(),txt);
+
+								if (parsed){
+
+										files_single.push_back(entry);
+								}
+								}
+						catch(...){
+
+								continue;
+						}
+						}
+				}
+		}
+
+		catch(const std::exception& error){
+
+				std::cerr << error.what() << std::endl;
+		}
+
+}
+
 
 
 int main(){
 
 		auto time = Time(multithreaded_version);
+		auto Time2 = Time(singleThreadedVersion);
 
 		std::cout << time << "ms" << std::endl;
+		std::cout << Time2 << "ms" << std::endl;
 
-		for (auto& file: files){
-
-				std::cout << file << std::endl;
-		}
+		assert(files_single == files);
+		
 
 /*
 		std::string_view txt = "dslkjdslkajdlkjo3p1ie0921i12903091";
