@@ -1,10 +1,12 @@
 #include <exception>
+#include <functional>
 #include <iostream>
 #include <algorithm>
 #include <fcntl.h>
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <ratio>
 #include <span>
 #include <stdexcept>
 #include <stdio.h>
@@ -16,9 +18,13 @@
 #include <unistd.h>
 #include <thread>
 #include "thread_safe_queue.hpp"
+#include <chrono>
 #include <filesystem>
+#include <utility>
+#include <vector>
 
 namespace fs = std::filesystem;
+using namespace std::chrono;
 
 ricc::thread_safe_queue<fs::path> a{};
 
@@ -26,7 +32,8 @@ std::size_t thread_count = std::thread::hardware_concurrency();
 
 auto root = "/home/riccardo";
 
-std::vector<fs::path> files;
+
+using Path_Maybe = std::optional<std::size_t>;
 
 class MemoryMap{
 
@@ -88,9 +95,7 @@ public:
 };
 
 
-void takeWorker(){
 
-}
 
 bool is_dotFile(auto& entry){
 		return entry.path().filename().string().starts_with('.');
@@ -137,7 +142,6 @@ constexpr bool is_beginning_line(std::size_t pos){
 		return pos == 0;
 }
 
-using Path_Maybe = std::optional<std::size_t>;
 Path_Maybe parse(std::span<const char> bytes, std::string_view txt){
 
 		auto begin = bytes.data();
@@ -169,7 +173,6 @@ Path_Maybe parse(std::span<const char> bytes, std::string_view txt){
 
 								if (!is_letter(*next)){
 
-										std::cout << "Found" << std::endl;
 										return position;
 								}
 						}
@@ -183,11 +186,17 @@ Path_Maybe parse(std::span<const char> bytes, std::string_view txt){
 
 }
 
+/*
+ * Add multiple threads, each thread will do their work then merge them at the end and vector pool
+ * */
 
+
+
+
+std::vector<fs::path> files;
 void consumer(){
 
 		fs::path path;
-		std::vector<fs::path> files;
 
 		std::string_view txt = "hello";
 
@@ -199,7 +208,8 @@ void consumer(){
 				auto parsed = parse(file.Data(), txt);
 
 				if (parsed){
-						std::cout << *path << std::endl;
+
+						files.push_back(*path);
 				}
 				}
 				catch(...){
@@ -212,20 +222,50 @@ void consumer(){
 
 }
 
+
 void Test(fs::path& path,std::string_view txt){
 
 		MemoryMap a{path};
 		parse(a.Data(),txt);
 }
 
+template<typename Callable>
+auto Time(Callable&& c){
 
-int main(){
+		auto start = steady_clock::now();
+
+		std::invoke(std::forward<Callable>(c));
+
+		auto end = steady_clock::now();
+
+		auto time = duration_cast<std::chrono::milliseconds>( end - start ).count();
+
+		return time;
+
+}
+
+auto multithreaded_version(){
+
 		std::thread t1(producer);
 		std::thread t2(consumer);
 
-
 		t1.join();
 		t2.join();
+
+}
+
+
+
+int main(){
+
+		auto time = Time(multithreaded_version);
+
+		std::cout << time << "ms" << std::endl;
+
+		for (auto& file: files){
+
+				std::cout << file << std::endl;
+		}
 
 /*
 		std::string_view txt = "dslkjdslkajdlkjo3p1ie0921i12903091";

@@ -53,7 +53,7 @@ public:
 				queue_.pop();
 		}
 
-		std::shared_ptr<T> wait_and_pop(){
+		std::optional<T> wait_and_pop(){
 
 				std::unique_lock<std::mutex> lock(mtx_);
 
@@ -67,10 +67,10 @@ public:
 								);
 				if (queue_.empty()){
 
-						return {};
+						return std::nullopt;
 				}
 
-				std::shared_ptr<T> const res (std::make_shared<T>(std::move(queue_.front())));
+				auto res = std::move(queue_.front());
 				queue_.pop();
 				return res;
 		}
@@ -104,13 +104,14 @@ public:
 		}
 
 
-		std::shared_ptr<T> try_pop(){
+		std::optional<T> try_pop(){
 
 				std::lock_guard<std::mutex> lock(mtx_);
 				if (queue_.empty()){
 						return std::shared_ptr<T>();
 				}
-				std::shared_ptr<T> const res( std::make_shared<T>(std::move(queue_.front())));
+
+				auto res = std::move(queue_.front());
 
 				queue_.pop();
 				return res;
